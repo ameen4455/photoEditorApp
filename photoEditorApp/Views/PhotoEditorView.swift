@@ -181,9 +181,12 @@ struct PhotoEditorView: View {
             // Draw caption text
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = .center
+            
+            let fontScaleRatio: CGFloat = 48.0 / UIScreen.main.bounds.height
+            let fontSize = imageSize.height * fontScaleRatio
 
             let attributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.boldSystemFont(ofSize: 48),
+                .font: UIFont.boldSystemFont(ofSize: fontSize),
                 .foregroundColor: UIColor(selectedColor), // Apply selected color
                 .paragraphStyle: paragraphStyle,
                 .shadow: NSShadow()

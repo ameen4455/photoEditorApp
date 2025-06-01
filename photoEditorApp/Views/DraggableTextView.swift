@@ -17,7 +17,6 @@ struct DraggableTextView: View {
         Text(text)
             .font(.system(size: 24, weight: .bold))
             .foregroundColor(color)
-            .shadow(radius: 2)
             .position(x: position.x + dragOffset.width,
                       y: position.y + dragOffset.height)
             .gesture(
