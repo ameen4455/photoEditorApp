@@ -21,10 +21,12 @@ struct PhotoEditorView: View {
     let originalImage: UIImage
     let onCancel: () -> Void
 
+    @State private var selectedColor: Color = .red
     @State private var caption: String = ""
     @State private var canvasStickers: [CanvasSticker] = []
     @State private var drawingPaths: [DrawingPath] = []
     @State private var currentDrawing: DrawingPath = DrawingPath(points: [])
+    @State private var captionPosition = CGPoint(x: 150, y: 100) // default starting point
 
     @State private var showStickerPicker = false
 
@@ -35,8 +37,11 @@ struct PhotoEditorView: View {
                     .resizable()
                     .scaledToFit()
                     .overlay(
-                        DrawingOverlayView(paths: drawingPaths, currentPath: currentDrawing)
+                        DrawingOverlayView(paths: drawingPaths, currentPath: currentDrawing, strokeColor: selectedColor)
                     )
+                    .overlay(content: {
+                        DraggableTextView(text: caption, position: $captionPosition, color: selectedColor)
+                    })
                     .overlay(
                         ForEach($canvasStickers) { sticker in
                             DraggableSticker(sticker: sticker)
@@ -52,25 +57,6 @@ struct PhotoEditorView: View {
                                 currentDrawing = DrawingPath(points: [])
                             }
                     )
-
-                if showStickerPicker {
-                    Color.black.opacity(0.6).edgesIgnoringSafeArea(.all)
-                    StickerPickerGridView { image in
-                        let screenWidth = UIScreen.main.bounds.width
-                        let aspectRatio = originalImage.size.height / originalImage.size.width
-                        let canvasSize = CGSize(width: screenWidth, height: screenWidth * aspectRatio)
-                        let centerPoint = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
-
-                        let newSticker = CanvasSticker(image: image, position: centerPoint)
-
-                        canvasStickers.append(newSticker)
-                        showStickerPicker = false
-                    }
-                    .frame(height: 300)
-                    .background(Color.white)
-                    .cornerRadius(16)
-                    .padding()
-                }
             }
             .frame(maxHeight: .infinity)
 
@@ -79,18 +65,27 @@ struct PhotoEditorView: View {
                 .background(Color(UIColor.secondarySystemBackground))
                 .cornerRadius(12)
                 .padding([.horizontal, .top])
+            
+            HStack(spacing: 16) {
+                ForEach([Color.red, Color.blue, Color.green, Color.yellow, Color.purple, Color.white, Color.black], id: \.self) { color in
+                    Circle()
+                        .fill(color)
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            Circle().stroke(Color.gray, lineWidth: selectedColor == color ? 3 : 0)
+                        )
+                        .onTapGesture {
+                            selectedColor = color
+                        }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal)
 
             HStack {
                 Button("Stickers") {
                     showStickerPicker = true
-                }
-
-                Spacer()
-
-                Button("Clear") {
-                    drawingPaths.removeAll()
-                    canvasStickers.removeAll()
-                    caption = ""
                 }
 
                 Spacer()
@@ -100,12 +95,52 @@ struct PhotoEditorView: View {
                 }
             }
             .padding(.horizontal)
-
-            Button("Cancel") {
-                onCancel()
-            }
             .padding(.bottom)
         }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") {
+                    onCancel()
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Reset") {
+                    drawingPaths.removeAll()
+                    canvasStickers.removeAll()
+                    caption = ""
+                }
+            }
+        }
+        .sheet(isPresented: $showStickerPicker) {
+           VStack {
+               HStack {
+                   Text("Pick a sticker")
+                       .font(.headline)
+                   Spacer()
+                   Button("Done") {
+                       showStickerPicker = false
+                   }
+               }
+               .padding()
+
+               StickerPickerGridView { image in
+                   let screenWidth = UIScreen.main.bounds.width
+                   let aspectRatio = originalImage.size.height / originalImage.size.width
+                   let canvasSize = CGSize(width: screenWidth, height: screenWidth * aspectRatio)
+                   let centerPoint = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+
+                   let newSticker = CanvasSticker(image: image, position: centerPoint)
+
+                   canvasStickers.append(newSticker)
+                   showStickerPicker = false
+               }
+               .padding()
+           }
+           .presentationDetents([.medium, .large])
+           .background(Color.white)
+       }
+        .ignoresSafeArea(.keyboard)
         .navigationBarBackButtonHidden(true)
     }
 
@@ -142,9 +177,35 @@ struct PhotoEditorView: View {
                 let frame = CGRect(origin: scaledOrigin, size: scaledSize)
                 sticker.image.draw(in: frame)
             }
+            
+            // Draw caption text
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 48),
+                .foregroundColor: UIColor(selectedColor), // Apply selected color
+                .paragraphStyle: paragraphStyle,
+                .shadow: NSShadow()
+            ]
+
+            let scaledPoint = CGPoint(
+                x: captionPosition.x * xScale,
+                y: captionPosition.y * yScale
+            )
+
+            let attributedText = NSAttributedString(string: caption, attributes: attributes)
+            let textSize = attributedText.size()
+
+            let textRect = CGRect(
+                origin: CGPoint(x: scaledPoint.x - textSize.width / 2, y: scaledPoint.y - textSize.height / 2),
+                size: textSize
+            )
+
+            attributedText.draw(in: textRect)
 
             // Draw scaled drawing paths
-            ctx.cgContext.setStrokeColor(UIColor.red.cgColor)
+            ctx.cgContext.setStrokeColor(UIColor(selectedColor).cgColor)
             ctx.cgContext.setLineWidth(4 * ((xScale + yScale) / 2))
 
             for path in drawingPaths {

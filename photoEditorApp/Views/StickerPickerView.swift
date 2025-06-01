@@ -16,8 +16,8 @@ struct StickerPickerGridView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(41...80, id: \.self) { index in
-                    if let image = UIImage(named: "Group \(index)") {
+                ForEach(1...40, id: \.self) { index in
+                    if let image = UIImage(named: "Sticker \(index)") {
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fit)

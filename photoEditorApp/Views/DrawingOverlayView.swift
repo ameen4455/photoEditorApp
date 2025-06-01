@@ -10,6 +10,7 @@ import SwiftUI
 struct DrawingOverlayView: View {
     let paths: [DrawingPath]
     let currentPath: DrawingPath
+    var strokeColor: Color
 
     var body: some View {
         Canvas { context, _ in
@@ -18,7 +19,7 @@ struct DrawingOverlayView: View {
                 if let first = path.points.first {
                     pathObj.move(to: first)
                     pathObj.addLines(path.points)
-                    context.stroke(pathObj, with: .color(.red), lineWidth: 4)
+                    context.stroke(pathObj, with: .color(strokeColor), lineWidth: 4)
                 }
             }
 
@@ -27,7 +28,7 @@ struct DrawingOverlayView: View {
             if let first = currentPath.points.first {
                 livePath.move(to: first)
                 livePath.addLines(currentPath.points)
-                context.stroke(livePath, with: .color(.red), lineWidth: 4)
+                context.stroke(livePath, with: .color(strokeColor), lineWidth: 4)
             }
         }
     }
